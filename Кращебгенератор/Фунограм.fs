@@ -6,6 +6,10 @@ open Funogram.Types
 
 module Апі =
     let апі = Funogram.Api.api
+
+    let (|Окей|Помилка|) = function Ok x -> Окей x | Error e -> Помилка e
+    type Результат<'x, 'e> = Result<'x, 'e> 
+
 module Типи =
     type ПомилкаВідповідіАпі = ApiResponseError
 
