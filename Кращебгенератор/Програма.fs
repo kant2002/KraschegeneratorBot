@@ -1,12 +1,12 @@
 ﻿module Программа
 
 open Фшарп.Ядро
-open Funogram.Api
-open Funogram.Telegram
-open Funogram.Telegram.Bot
-open Funogram.Types
+open Фунограм.Апі
+open Фунограм.Телеграм
+open Фунограм.Телеграм.Бот
+open Фунограм.Типи
 
-let обробитиРезультатІзЗначенням (результат: Result<'a, ApiResponseError>) =
+let обробитиРезультатІзЗначенням (результат: Result<'a, ПомилкаВідповідіАпі>) =
   match результат with
   | Ok з -> Some з
   | Error п ->
@@ -52,17 +52,17 @@ let цитати = [
 let обробитиРезультат результат =
   обробитиРезультатІзЗначенням результат |> ігнорувати
 
-let результатБота конфігурация дані = api конфігурация дані |> Async.RunSynchronously
+let результатБота конфігурация дані = апі конфігурация дані |> Async.RunSynchronously
 let бот конфігурация дані = результатБота конфігурация дані |> обробитиРезультат
 
 let текстВітання = "Краще б…\n"
 
 let відправитиВітання ідЧата = 
     let текст = текстВітання + цитати[System.Random.Shared.Next(цитати.Length)]
-    let командаВідправкиВітання = Api.sendMessage ідЧата текст
+    let командаВідправкиВітання = Апі.відправитиПовідомлення ідЧата текст
     [| командаВідправкиВітання |]
 
-let трапилосьОновлення (ктк: UpdateContext) =
+let трапилосьОновлення (ктк: КонтекстОновлення) =
     let ізІд () = 
         match ктк.Update with
             | { CallbackQuery = cq; Message = m; MyChatMember = mcm } when Option.isSome cq && Option.isNone m && Option.isNone mcm ->
@@ -79,9 +79,8 @@ let трапилосьОновлення (ктк: UpdateContext) =
   
     let ідЧата = ізІд ()
     let результат =
-      processCommands ктк [|
-        // Car bot
-        cmd "/start" (fun _ -> відправитиВітання ідЧата |> виконати)
+      обробитиКоманди ктк [|
+        кмд "/start" (fun _ -> відправитиВітання ідЧата |> виконати)
       |]
     if результат then 
         відправитиВітання ідЧата |> виконати
@@ -91,10 +90,10 @@ let трапилосьОновлення (ктк: UpdateContext) =
 [<EntryPoint>]
 let main _ =
     асинх {
-        let конфигурація = Config.defaultConfig |> Config.withReadTokenFromFile
-        let! _ = Api.deleteWebhookBase () |> api конфигурація
+        let конфигурація = Конфігурація.конфігЗаЗамовчанням |> Конфігурація.ізЧитаннямТокенуІзФайла
+        let! _ = Апі.видалитиБазуВебхука () |> апі конфигурація
         if конфигурація.Token = "" then провалитисяз "Токен не указан"
         напечататифн "Бот стартує"
-        return! startBot конфигурація трапилосьОновлення None
+        return! запуститиБота конфигурація трапилосьОновлення None
     } |> Асинх.ВиконатиСинхронно
     0
